@@ -9,4 +9,4 @@ https://lk.neural-university.ru/lesson/840
 - python manage.py seed
 - python manage.py runserver
 
-После этого откройте в браузере страницу http://127.0.0.1:8000
+После этого откройте в браузере страницу http://127.0.0.1:8000/admin
