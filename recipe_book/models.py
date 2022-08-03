@@ -1,18 +1,20 @@
-from django.db.models import Model, SlugField, TextField, ManyToManyField, ForeignKey, CASCADE, RESTRICT, OneToOneField, \
+from django.db.models import Model, TextField, ManyToManyField, ForeignKey, CASCADE, RESTRICT, OneToOneField, \
     PositiveSmallIntegerField, CharField, DateTimeField
 
 
 class Ingredient(Model):
-    name = SlugField(unique=True, allow_unicode=True)
+    name = CharField(max_length=50, unique=True)
 
     def __str__(self):
         return self.name
 
 
 class Recipe(Model):
-    title = SlugField(max_length=100, unique=True, allow_unicode=True)
+    title = CharField(max_length=100, unique=True)
     description = TextField()
-    ingredients = ManyToManyField(Ingredient, through='RecipeIngredient')
+    ingredients = ManyToManyField(
+        Ingredient, through='RecipeIngredient', related_name="ingredients", related_query_name="ingredient"
+    )
     created_dt = DateTimeField(auto_now_add=True)
     updated_dt = DateTimeField(auto_now=True)
 
@@ -23,10 +25,10 @@ class Recipe(Model):
 class RecipeIngredient(Model):
     ingredient = ForeignKey(Ingredient, on_delete=RESTRICT)
     recipe = ForeignKey(Recipe, on_delete=RESTRICT)
-    amount = CharField(max_length=30)
+    amount = CharField(max_length=30, blank=True)
 
     def __str__(self):
-        return f'{self.ingredient.name} - {self.amount}'
+        return f'{self.ingredient.name}{self.amount if f" - {self.amount}" else ""}'
 
 
 class Instruction(Model):
@@ -38,7 +40,7 @@ class Instruction(Model):
 
 class Stage(Model):
     number = PositiveSmallIntegerField()
-    title = SlugField(max_length=100, allow_unicode=True, blank=True)
+    title = CharField(max_length=100, blank=True)
     instruction = ForeignKey(Instruction, on_delete=RESTRICT, related_name='stages')
 
     def __str__(self):

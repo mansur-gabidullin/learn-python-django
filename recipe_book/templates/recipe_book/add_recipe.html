@@ -2,5 +2,52 @@
 {% load static %}
 
 {% block content %}
-    <h2>Здесь будет форма добавления рецепта</h2>
+    <div class="container-fluid bg-light bg-icon py-6 mb-5">
+        <div class="container">
+            <form method="post" action="/add_recipe">
+                {% csrf_token %}
+
+                {% for hidden in form.hidden_fields %}
+                    {{ hidden }}
+                {% endfor %}
+
+                {% if form.non_field_errors %}<div class="text-danger mb-3">{{ form.non_field_errors }}</div>{% endif %}
+
+                <div class="mb-3">
+                    <label for="title" class="form-label">Название рецепта</label>
+                    <input name="title" type="text" class="form-control{% if form.title.errors %} is-invalid{% endif %}" id="title" value="{{ form.title.value|default:'' }}">
+                    <div class="invalid-feedback">{{ form.title.errors }}</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">Общее описание</label>
+                    <textarea name="description" class="form-control{% if form.description.errors %} is-invalid{% endif %}" id="description"
+                              rows="3">{{ form.description.value|default:'' }}</textarea>
+                    <div class="invalid-feedback">{{ form.description.errors }}</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="ingredients" class="form-label">Ингредиенты</label>
+                    <textarea name="ingredients" class="form-control{% if form.ingredients.errors %} is-invalid{% endif %}" id="ingredients" rows="6"
+                              aria-describedby="ingredientsHelp">{{ form.ingredients.value|default:'' }}</textarea>
+                    <div id="ingredientsHelp" class="form-text">
+                        Каждый ингредиент должен быть на отдельной строке.
+                    </div>
+                    <div class="invalid-feedback">{{ form.ingredients.errors }}</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="steps" class="form-label">Инструкция приготовления по шагам</label>
+                    <textarea name="steps" class="form-control{% if form.steps.errors %} is-invalid{% endif %}" id="steps" rows="10"
+                              aria-describedby="stepsHelp">{{ form.steps.value|default:'' }}</textarea>
+                    <div id="stepsHelp" class="form-text">Каждый шаг должен быть на отдельной строке, т.е. разделён
+                        переводом строки
+                    </div>
+                    <div class="invalid-feedback">{{ form.steps.errors }}</div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Отправить</button>
+            </form>
+        </div>
+    </div>
 {% endblock %}

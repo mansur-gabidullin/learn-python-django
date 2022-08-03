@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+    <div class="container-fluid bg-light bg-icon py-6 mb-5">
+        <div class="container">
+            <h3>{{ recipe.title }}</h3>
+            <p>{{ recipe.description }}</p>
+            <h4>Ингредиенты</h4>
+            <ul>
+                {% for name in recipe.ingredients.all %}
+                    <li>{{ name }}</li>
+                {% endfor %}
+            </ul>
+            <h4>Инструкция по приготовлению</h4>
+            <ul>
+                {% for stage in recipe.instruction.stages.all %}
+                    <li>
+                        {{ stage.title }}
+                        <ul>
+                            {% for step in stage.steps.all %}
+                                <li>{{ step.description }}</li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+{% endblock %}
