@@ -1,5 +1,6 @@
 <div class="d-none d-lg-flex ms-2">
-    <a class="btn-sm-square bg-white rounded-circle ms-3" href="{% url 'add_recipe' %}" title="Добавит рецепт">
+    <a class="btn-sm-square bg-white rounded-circle ms-3" href="{% url 'recipe' mode='add' pk=pk %}"
+       title="Добавит рецепт">
         <small class="fa fa-plus text-body"></small>
     </a>
 </div>

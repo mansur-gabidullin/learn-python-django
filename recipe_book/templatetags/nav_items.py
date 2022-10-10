@@ -17,5 +17,5 @@ def get_nav_items():
     return (
         NavItem(reverse('index'), 'Главная'),
         NavItem(reverse('recipes'), 'Рецепты'),
-        NavItem(reverse('about_as'), 'О нас'),
+        NavItem(reverse('about_us'), 'О нас'),
     )

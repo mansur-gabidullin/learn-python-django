@@ -4,27 +4,106 @@
 {% block content %}
     <div class="container-fluid bg-light bg-icon py-6 mb-5">
         <div class="container">
-            <h3>{{ recipe.title }}</h3>
-            <p>{{ recipe.description }}</p>
-            <h4>Ингредиенты</h4>
-            <ul>
-                {% for name in recipe.ingredients.all %}
-                    <li>{{ name }}</li>
-                {% endfor %}
-            </ul>
-            <h4>Инструкция по приготовлению</h4>
-            <ul>
-                {% for stage in recipe.instruction.stages.all %}
-                    <li>
-                        {{ stage.title }}
-                        <ul>
-                            {% for step in stage.steps.all %}
-                                <li>{{ step.description }}</li>
-                            {% endfor %}
-                        </ul>
-                    </li>
-                {% endfor %}
-            </ul>
+            {% if mode == 'view' %}
+                <h3 class="d-flex">
+                    <div class="flex-grow-1">{{ recipe.title }}</div>
+                    <div class="flex-grow-0">
+                        <small class="ms-5 text-center py-2">
+                            <a class="text-body" href="{% url 'recipe' mode='edit' pk=recipe.id %}"><i
+                                    class="fa fa-edit text-primary me-2"></i>Изменить</a>
+                        </small>
+                        <small class="ms-5 text-center py-2">
+                            <a class="text-body" href="{% url 'recipe' mode='delete' pk=recipe.id %}"><i
+                                    class="fa fa-times text-primary me-2"></i>Удалить</a>
+                        </small>
+                    </div>
+                </h3>
+
+                <p>{{ recipe.description }}</p>
+                <h4>Ингредиенты</h4>
+                <ul>
+                    {% for name in recipe.ingredients.all %}
+                        <li>{{ name }}</li>
+                    {% endfor %}
+                </ul>
+                <h4>Инструкция по приготовлению</h4>
+                <ul>
+                    {% for stage in recipe.instruction.stages.all %}
+                        <li>
+                            {{ stage.title }}
+                            <ul>
+                                {% for step in stage.steps.all %}
+                                    <li>{{ step.description }}</li>
+                                {% endfor %}
+                            </ul>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <form method="post" action="{% url 'recipe' mode=mode pk=recipe.id %}">
+                    {% csrf_token %}
+
+                    <input type="hidden" name="pk" value="{{ recipe.id }}">
+                    <input type="hidden" name="mode" value="{{ mode }}">
+
+                    {% for hidden in form.hidden_fields %}
+                        {{ hidden }}
+                    {% endfor %}
+
+                    {% if form.non_field_errors %}
+                        <div class="text-danger mb-3">{{ form.non_field_errors }}</div>{% endif %}
+
+                    {% if mode == 'delete' %}
+                        <div class="text-danger mb-3">Вы уверены, что хотите удалить рецепт?</div>
+                        <button type="submit" class="btn btn-primary">Удалить</button>
+                    {% else %}
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Название рецепта</label>
+                            <input name="title" type="text"
+                                   class="form-control{% if form.title.errors %} is-invalid{% endif %}"
+                                   id="title"
+                                   value="{{ form.title.value|default:'' }}"
+                            >
+                            <div class="invalid-feedback">{{ form.title.errors }}</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Общее описание</label>
+                            <textarea name="description"
+                                      class="form-control{% if form.description.errors %} is-invalid{% endif %}"
+                                      id="description"
+                                      rows="3">{{ form.description.value|default:'' }}</textarea>
+                            <div class="invalid-feedback">{{ form.description.errors }}</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="ingredients" class="form-label">Ингредиенты</label>
+                            <textarea name="ingredients"
+                                      class="form-control{% if form.ingredients.errors %} is-invalid{% endif %}"
+                                      id="ingredients" rows="6"
+                                      aria-describedby="ingredientsHelp">{{ form.ingredients.value|default:'' }}</textarea>
+                            <div id="ingredientsHelp" class="form-text">
+                                Каждый ингредиент должен быть на отдельной строке.
+                            </div>
+                            <div class="invalid-feedback">{{ form.ingredients.errors }}</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="steps" class="form-label">Инструкция приготовления по шагам</label>
+                            <textarea name="steps" class="form-control{% if form.steps.errors %} is-invalid{% endif %}"
+                                      id="steps" rows="10"
+                                      aria-describedby="stepsHelp">{{ form.steps.value|default:'' }}</textarea>
+                            <div id="stepsHelp" class="form-text">Каждый шаг должен быть на отдельной строке, т.е.
+                                разделён
+                                переводом строки
+                            </div>
+                            <div class="invalid-feedback">{{ form.steps.errors }}</div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Отправить</button>
+                    {% endif %}
+                </form>
+            {% endif %}
         </div>
     </div>
 {% endblock %}
