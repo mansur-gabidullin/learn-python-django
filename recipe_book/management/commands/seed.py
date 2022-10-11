@@ -31,8 +31,6 @@ class Command(BaseCommand):
             except Ingredient.DoesNotExist:
                 recipe = Recipe.objects.create(title=title, description=description)
 
-            recipe.save()
-
             for name, amount in ingredients:
                 self.stdout.write(self.style.HTTP_INFO(f'Parsing ingredient: {name}'))
 
@@ -40,21 +38,15 @@ class Command(BaseCommand):
                     ingredient = Ingredient.objects.get(name=name)
                 except Ingredient.DoesNotExist:
                     ingredient = Ingredient.objects.create(name=name)
-                    ingredient.save()
 
-                recipe_ingredient = RecipeIngredient(recipe=recipe, ingredient=ingredient, amount=amount)
-                recipe_ingredient.save()
+                RecipeIngredient.objects.create(recipe=recipe, ingredient=ingredient, amount=amount)
 
             instruction = Instruction.objects.create(recipe=recipe)
-            instruction.save()
 
             stage = Stage.objects.create(instruction=instruction, number=1)
-            stage.save()
 
-            for number, step_description in enumerate(steps):
+            for number, step_description in enumerate(steps, start=1):
                 self.stdout.write(self.style.HTTP_INFO(f'Parsing step: {number}'))
-
-                step = Step.objects.create(stage=stage, number=number, description=step_description)
-                step.save()
+                Step.objects.create(stage=stage, number=number, description=step_description)
 
         self.stdout.write(self.stdout.write(self.style.SUCCESS('Done.')))

@@ -1,11 +1,10 @@
-from django.urls import path
+from django.urls import path, re_path
 
-from recipe_book.views import index, recipe, recipes, about_as, add_recipe
+from recipe_book.views import IndexView, RecipesListView, AboutAsTemplateView, RecipeFormView
 
 urlpatterns = [
-    path('', index, name='index'),
-    path('recipe/<int:id>', recipe, name='recipe'),
-    path('recipes', recipes, name='recipes'),
-    path('about_as', about_as, name='about_as'),
-    path('add_recipe', add_recipe, name='add_recipe'),
+    path('', IndexView.as_view(), name='index'),
+    re_path(r'^recipe/(?P<mode>add|view|edit|delete)/(?P<pk>\d+)?$', RecipeFormView.as_view(), name='recipe'),
+    path('recipes', RecipesListView.as_view(), name='recipes'),
+    path('about_us', AboutAsTemplateView.as_view(), name='about_us'),
 ]

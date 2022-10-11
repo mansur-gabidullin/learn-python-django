@@ -1,89 +1,147 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
-from django.http import HttpResponseRedirect
-from django.shortcuts import render, get_object_or_404
-from django.urls import reverse
+from django.http import Http404
+from django.urls import reverse_lazy
+from django.views.generic import TemplateView, DetailView, ListView, FormView
 
-from recipe_book.forms import AddRecipeForm
+from recipe_book.forms import RecipeForm
 from recipe_book.models import Recipe, Ingredient, RecipeIngredient, Instruction, Stage, Step
 
 
-def index(request):
-    context = {
-        'title': 'Главная',
-    }
-
-    return render(request, 'recipe_book/index.html', context=context)
+class IndexView(TemplateView):
+    template_name = 'recipe_book/index.html'
+    extra_context = {'title': 'Главная'}
 
 
-def recipe(request, id):
-    recipe = get_object_or_404(Recipe, pk=id)
-
-    context = {
-        'title': recipe.title,
-        'recipe': recipe
-    }
-
-    return render(request, 'recipe_book/recipe.html', context=context)
+class RecipesListView(ListView):
+    model = Recipe
+    context_object_name = 'recipes'
+    extra_context = {'title': 'Рецепты'}
+    template_name = 'recipe_book/recipes.html'
 
 
-def recipes(request):
-    context = {
-        'title': 'Рецепты',
-        'recipes': Recipe.objects.all()
-    }
-
-    return render(request, 'recipe_book/recipes.html', context=context)
+class AboutAsTemplateView(TemplateView):
+    extra_context = {'title': 'О нас'}
+    template_name = 'recipe_book/about_us.html'
 
 
-def about_as(request):
-    context = {
-        'title': 'О нас',
-    }
+class RecipeDetailView(DetailView):
+    model = Recipe
+    context_object_name = 'recipe'
+    template_name = 'recipe_book/recipe.html'
 
-    return render(request, 'recipe_book/about_as.html', context=context)
+    def get_context_data(self, **kwargs):
+        context = super(RecipeDetailView, self).get_context_data(**kwargs)
+        context.update(title=self.object.title)
+        return context
 
 
-def add_recipe(request):
-    is_post = request.method == 'POST'
+class RecipeFormView(FormView):
+    form_class = RecipeForm
+    template_name = 'recipe_book/recipe.html'
+    success_url = reverse_lazy('recipes')
+    http_method_names = ['get', 'post']
+    recipe = None
+    mode = None
 
-    form = AddRecipeForm(request.POST) if is_post else AddRecipeForm()
+    def dispatch(self, request, *args, **kwargs):
+        self.mode = self.kwargs.get('mode')
 
-    context = {
-        'title': 'Добавить рецепт',
-        'form': form
-    }
+        if self.mode == 'view' and request.method == 'POST':
+            raise Exception(f'The HTTP method {self.mode} is not allowed in view mode.')
 
-    if is_post and form.is_valid():
-        data = form.cleaned_data
-        title = data['title']
-        description = data['description']
-        ingredients = data['ingredients']
-        steps = data['steps']
+        try:
+            pk = int(self.kwargs.get('pk'))
+            self.recipe = Recipe.objects.get(pk=pk)
+        except (ValueError, TypeError, ObjectDoesNotExist):
+            if self.mode != 'add':
+                raise Http404()
+
+        return super(RecipeFormView, self).dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        if self.mode == 'delete':
+            return self.form_valid(self.get_form())
+        return super(RecipeFormView, self).post(request, *args, **kwargs)
+
+    def get_initial(self):
+        initial = super(RecipeFormView, self).get_initial()
+        if self.recipe:
+            initial.update(self.recipe.get_fields_values())
+        return initial
+
+    def get_context_data(self, **kwargs):
+        match self.mode:
+            case 'add':
+                title = 'Добавление рецепта'
+            case 'edit':
+                title = f'Редактирование рецепта {self.recipe.title}'
+            case 'view':
+                title = f'Просмотр рецепта {self.recipe.title}'
+            case 'delete':
+                title = f'Удаление рецепта {self.recipe.title}'
+            case _:
+                raise ValueError(f'The mode {self.mode} is not supported.')
+
+        context = super(RecipeFormView, self).get_context_data(**kwargs)
+        context.update(title=title, mode=self.mode)
+
+        if self.recipe:
+            context.update(recipe=self.recipe, pk=self.recipe.id)
+
+        return context
+
+    def form_valid(self, form):
+        title = None
+        description = None
+        ingredients = None
+        steps = None
+
+        if self.mode != 'delete':
+            data = form.cleaned_data
+            title = data['title']
+            description = data['description']
+            ingredients = data['ingredients']
+            steps = data['steps']
 
         with transaction.atomic():
-            recipe = Recipe.objects.create(title=title, description=description)
-            recipe.save()
+            if self.mode == 'add':
+                recipe = Recipe.objects.create(title=title, description=description)
+            else:
+                recipe = self.recipe
 
-            for ingredient_name in ingredients:
-                try:
-                    ingredient = Ingredient.objects.get(name=ingredient_name)
-                except Ingredient.DoesNotExist:
-                    ingredient = Ingredient.objects.create(name=ingredient_name)
-                    ingredient.save()
+            if self.mode == 'edit':
+                recipe.title = title
+                recipe.description = description
+                recipe.save()
 
-                recipe_ingredient = RecipeIngredient(recipe=recipe, ingredient=ingredient)
-                recipe_ingredient.save()
+            if self.mode == 'edit' or self.mode == 'delete':
+                RecipeIngredient.objects.filter(recipe=recipe).delete()
+                recipe.ingredients.all().delete()
+                Step.objects.filter(stage__instruction__recipe=recipe).delete()
+                Stage.objects.filter(instruction__recipe=recipe).delete()
+                recipe.instruction.delete()
 
-            instruction = Instruction.objects.create(recipe=recipe)
-            instruction.save()
+            if self.mode == 'delete':
+                recipe.delete()
+            else:
+                instruction = Instruction.objects.create(recipe=recipe)
+                stage = Stage.objects.create(instruction=instruction, number=1)
 
-            stage = Stage.objects.create(instruction=instruction, number=1)
-            stage.save()
+                for number, step_description in enumerate(steps, start=1):
+                    Step.objects.create(stage=stage, number=number, description=step_description)
 
-            for number, step_description in enumerate(steps):
-                step = Step.objects.create(stage=stage, number=number, description=step_description)
-                step.save()
+                for ingredient_name in ingredients:
+                    try:
+                        ingredient = Ingredient.objects.get(name=ingredient_name)
+                    except Ingredient.DoesNotExist:
+                        ingredient = Ingredient.objects.create(name=ingredient_name)
 
-        return HttpResponseRedirect(reverse('recipes'))
+                    RecipeIngredient.objects.create(recipe=recipe, ingredient=ingredient)
 
-    return render(request, 'recipe_book/add_recipe.html', context=context)
+                for number, step_description in enumerate(steps, start=1):
+                    step = stage.steps.get(number=number)
+                    step.step_description = step_description
+                    step.save()
+
+        return super(RecipeFormView, self).form_valid(form)
