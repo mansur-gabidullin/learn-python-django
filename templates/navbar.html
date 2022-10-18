@@ -22,6 +22,24 @@
                     </a>
                 {% endfor %}
             </div>
+            <div class="d-none d-lg-flex ms-2">
+
+                {% if user.is_authenticated %}
+                    <a class="btn-sm-square bg-white rounded-circle ms-3" href="{% url 'accounts:profile' %}">
+                        <small class="fa fa-user text-body"></small>
+                    </a>
+                    <a class="btn-sm-square bg-white rounded-circle ms-3" href="{% url 'accounts:logout' %}">
+                        <small class="fa fa-sign-out-alt text-body"></small>
+                    </a>
+                {% else %}
+                    <a class="btn-sm-square bg-white rounded-circle ms-3" href="{% url 'accounts:login' %}">
+                        <small class="fa fa-sign-in-alt text-body"></small>
+                    </a>
+                    <a class="btn-sm-square bg-white rounded-circle ms-3" href="{% url 'accounts:signup' %}">
+                        <small class="fa fa-user-plus text-body"></small>
+                    </a>
+                {% endif %}
+            </div>
 
             {% include 'tool_bar.html' %}
         </div>

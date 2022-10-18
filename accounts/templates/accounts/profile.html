@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+    <p>
+        {{ object }}
+    </p>
+    <a href="{% url 'accounts:logout' %}">Выйти</a>
+{% endblock %}
