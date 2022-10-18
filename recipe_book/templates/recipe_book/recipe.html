@@ -7,16 +7,18 @@
             {% if mode == 'view' %}
                 <h3 class="d-flex">
                     <div class="flex-grow-1">{{ recipe.title }}</div>
-                    <div class="flex-grow-0">
-                        <small class="ms-5 text-center py-2">
-                            <a class="text-body" href="{% url 'recipe' mode='edit' pk=recipe.id %}"><i
-                                    class="fa fa-edit text-primary me-2"></i>Изменить</a>
-                        </small>
-                        <small class="ms-5 text-center py-2">
-                            <a class="text-body" href="{% url 'recipe' mode='delete' pk=recipe.id %}"><i
-                                    class="fa fa-times text-primary me-2"></i>Удалить</a>
-                        </small>
-                    </div>
+                    {% if user.is_superuser %}
+                        <div class="flex-grow-0">
+                            <small class="ms-5 text-center py-2">
+                                <a class="text-body" href="{% url 'recipe' mode='edit' pk=recipe.id %}"><i
+                                        class="fa fa-edit text-primary me-2"></i>Изменить</a>
+                            </small>
+                            <small class="ms-5 text-center py-2">
+                                <a class="text-body" href="{% url 'recipe' mode='delete' pk=recipe.id %}"><i
+                                        class="fa fa-times text-primary me-2"></i>Удалить</a>
+                            </small>
+                        </div>
+                    {% endif %}
                 </h3>
 
                 <p>{{ recipe.description }}</p>

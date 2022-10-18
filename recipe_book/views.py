@@ -1,3 +1,4 @@
+from django.contrib.auth.mixins import AccessMixin
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.http import Http404
@@ -36,7 +37,7 @@ class RecipeDetailView(DetailView):
         return context
 
 
-class RecipeFormView(FormView):
+class RecipeFormView(AccessMixin, FormView):
     form_class = RecipeForm
     template_name = 'recipe_book/recipe.html'
     success_url = reverse_lazy('recipes')
@@ -46,6 +47,10 @@ class RecipeFormView(FormView):
 
     def dispatch(self, request, *args, **kwargs):
         self.mode = self.kwargs.get('mode')
+        has_access = request.user.is_superuser or self.mode == 'view'
+
+        if not has_access:
+            return self.handle_no_permission()
 
         if self.mode == 'view' and request.method == 'POST':
             raise Exception(f'The HTTP method {self.mode} is not allowed in view mode.')
