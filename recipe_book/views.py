@@ -1,12 +1,11 @@
 from django.contrib.auth.mixins import AccessMixin
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import transaction
 from django.http import Http404
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView, DetailView, ListView, FormView
 
 from recipe_book.forms import RecipeForm
-from recipe_book.models import Recipe, Ingredient, RecipeIngredient, Instruction, Stage, Step
+from recipe_book.models import Recipe, IngredientWithAmount
 
 
 class IndexView(TemplateView):
@@ -97,56 +96,17 @@ class RecipeFormView(AccessMixin, FormView):
         return context
 
     def form_valid(self, form):
-        title = None
-        description = None
-        ingredients = None
-        steps = None
+        data = form.cleaned_data
+        data['ingredients'] = (IngredientWithAmount(name, amount='') for name, amount in data['ingredients'])
 
-        if self.mode != 'delete':
-            data = form.cleaned_data
-            title = data['title']
-            description = data['description']
-            ingredients = data['ingredients']
-            steps = data['steps']
-
-        with transaction.atomic():
-            if self.mode == 'add':
-                recipe = Recipe.objects.create(title=title, description=description)
-            else:
-                recipe = self.recipe
-
-            if self.mode == 'edit':
-                recipe.title = title
-                recipe.description = description
-                recipe.save()
-
-            if self.mode == 'edit' or self.mode == 'delete':
-                RecipeIngredient.objects.filter(recipe=recipe).delete()
-                recipe.ingredients.all().delete()
-                Step.objects.filter(stage__instruction__recipe=recipe).delete()
-                Stage.objects.filter(instruction__recipe=recipe).delete()
-                recipe.instruction.delete()
-
-            if self.mode == 'delete':
-                recipe.delete()
-            else:
-                instruction = Instruction.objects.create(recipe=recipe)
-                stage = Stage.objects.create(instruction=instruction, number=1)
-
-                for number, step_description in enumerate(steps, start=1):
-                    Step.objects.create(stage=stage, number=number, description=step_description)
-
-                for ingredient_name in ingredients:
-                    try:
-                        ingredient = Ingredient.objects.get(name=ingredient_name)
-                    except Ingredient.DoesNotExist:
-                        ingredient = Ingredient.objects.create(name=ingredient_name)
-
-                    RecipeIngredient.objects.create(recipe=recipe, ingredient=ingredient)
-
-                for number, step_description in enumerate(steps, start=1):
-                    step = stage.steps.get(number=number)
-                    step.step_description = step_description
-                    step.save()
+        match self.mode:
+            case 'add':
+                Recipe.add(**data)
+            case 'edit':
+                self.recipe.edit(**data)
+            case 'delete':
+                self.recipe.remove()
+            case _:
+                raise ValueError(f'{self.mode} is not supported')
 
         return super(RecipeFormView, self).form_valid(form)

@@ -30,15 +30,8 @@
                 </ul>
                 <h4>Инструкция по приготовлению</h4>
                 <ul>
-                    {% for stage in recipe.instruction.stages.all %}
-                        <li>
-                            {{ stage.title }}
-                            <ul>
-                                {% for step in stage.steps.all %}
-                                    <li>{{ step.description }}</li>
-                                {% endfor %}
-                            </ul>
-                        </li>
+                    {% for step in recipe.steps.all %}
+                        <li>{{ step.description }}</li>
                     {% endfor %}
                 </ul>
             {% else %}

@@ -1,8 +1,10 @@
+from time import time
+
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from ...parser import parse
-from recipe_book.models import Step, Stage, Instruction, Recipe, RecipeIngredient, Ingredient
+from recipe_book.models import Recipe
 
 
 class Command(BaseCommand):
@@ -20,33 +22,16 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.HTTP_INFO('Start parsing...'))
 
-        for title, description, ingredients, steps in parse(total, sleep_sec=sleep_sec):
+        for data in parse(total, sleep_sec=sleep_sec):
+            title = data['title']
             self.stdout.write(self.style.HTTP_INFO(f'Parsing recipe: {title}'))
 
-            try:
-                same_recipe_count = Recipe.objects.filter(title=title).count()
-                title = f'[DUPLICATE {same_recipe_count + 1}] {title}'
-                recipe = Recipe.objects.create(title=title, description=description)
+            same_recipe_count = Recipe.objects.filter(title=title).count()
+
+            if same_recipe_count > 0:
                 self.stdout.write(self.style.WARNING(f'Found duplicate: {title}'))
-            except Ingredient.DoesNotExist:
-                recipe = Recipe.objects.create(title=title, description=description)
+                data['title'] = f'[DUPLICATE {time()}] {title}'
 
-            for name, amount in ingredients:
-                self.stdout.write(self.style.HTTP_INFO(f'Parsing ingredient: {name}'))
+            Recipe.add(**data)
 
-                try:
-                    ingredient = Ingredient.objects.get(name=name)
-                except Ingredient.DoesNotExist:
-                    ingredient = Ingredient.objects.create(name=name)
-
-                RecipeIngredient.objects.create(recipe=recipe, ingredient=ingredient, amount=amount)
-
-            instruction = Instruction.objects.create(recipe=recipe)
-
-            stage = Stage.objects.create(instruction=instruction, number=1)
-
-            for number, step_description in enumerate(steps, start=1):
-                self.stdout.write(self.style.HTTP_INFO(f'Parsing step: {number}'))
-                Step.objects.create(stage=stage, number=number, description=step_description)
-
-        self.stdout.write(self.stdout.write(self.style.SUCCESS('Done.')))
+        self.stdout.write(self.style.SUCCESS('Done.'))
