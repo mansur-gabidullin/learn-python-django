@@ -1,19 +1,10 @@
 from typing import NamedTuple, Sequence
 
 from django.db import transaction
-from django.db.models import (
-    Model,
-    TextField,
-    ManyToManyField,
-    ForeignKey,
-    RESTRICT,
-    PositiveSmallIntegerField,
-    CharField,
-    DateTimeField
-)
+from django.db.models import Model, TextField, ForeignKey, RESTRICT, PositiveSmallIntegerField, CharField, DateTimeField
 
 
-class IngredientWithAmount(NamedTuple):
+class IngredientNameWithAmount(NamedTuple):
     name: str
     amount: str = ''
 
@@ -28,12 +19,6 @@ class Ingredient(Model):
 class Recipe(Model):
     title = CharField(max_length=100, unique=True)
     description = TextField()
-    ingredients = ManyToManyField(
-        Ingredient,
-        through='RecipeIngredient',
-        related_name="ingredients",
-        related_query_name="ingredient"
-    )
     created_dt = DateTimeField(auto_now_add=True)
     updated_dt = DateTimeField(auto_now=True)
 
@@ -41,7 +26,7 @@ class Recipe(Model):
         return self.title
 
     @transaction.atomic
-    def create_ingredients(self, ingredients: Sequence[IngredientWithAmount]):
+    def create_ingredients(self, ingredients: Sequence[IngredientNameWithAmount]):
         for name, amount in ingredients:
             try:
                 ingredient = Ingredient.objects.get(name=name)
@@ -51,27 +36,29 @@ class Recipe(Model):
             RecipeIngredient.objects.create(recipe=self, ingredient=ingredient, amount=amount)
 
     @transaction.atomic
-    def create_steps(self, steps):
+    def create_steps(self, steps: Sequence[str]):
         for number, step_description in enumerate(steps, start=1):
             Step.objects.create(recipe=self, number=number, description=step_description)
 
     @transaction.atomic
     def remove_ingredients(self):
-        RecipeIngredient.objects.filter(recipe=self).delete()
+        self.ingredients.all().delete()
 
     @transaction.atomic
     def remove_steps(self):
-        self.steps.delete()
+        self.steps.all().delete()
 
     @staticmethod
     @transaction.atomic
-    def add(*_, title, description, ingredients: Sequence[IngredientWithAmount], steps):
+    def add(*, title: str, description: str, ingredients: Sequence[IngredientNameWithAmount], steps: Sequence[str]):
         recipe = Recipe.objects.create(title=title, description=description)
         recipe.create_ingredients(ingredients)
         recipe.create_steps(steps)
+        return recipe
 
     @transaction.atomic
-    def edit(self, *_, title, description, ingredients: Sequence[IngredientWithAmount], steps):
+    def edit(self, *, title: str, description: str, ingredients: Sequence[IngredientNameWithAmount],
+             steps: Sequence[str]):
         self.title = title
         self.description = description
         self.save()
@@ -86,18 +73,10 @@ class Recipe(Model):
         self.remove_steps()
         self.delete()
 
-    def get_fields_values(self):
-        return {
-            'title': self.title,
-            'description': self.description,
-            'ingredients': '\n'.join(i.name for i in self.ingredients.all()),
-            'steps': '\n'.join(step.description for step in self.steps.all()),
-        }
-
 
 class RecipeIngredient(Model):
     ingredient = ForeignKey(Ingredient, on_delete=RESTRICT)
-    recipe = ForeignKey(Recipe, on_delete=RESTRICT)
+    recipe = ForeignKey(Recipe, on_delete=RESTRICT, related_name='ingredients')
     amount = CharField(max_length=30, blank=True)
 
     def __str__(self):

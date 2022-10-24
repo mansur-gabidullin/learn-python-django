@@ -4,7 +4,7 @@ from typing import Sequence, TypedDict
 import requests
 from bs4 import BeautifulSoup
 
-from recipe_book.models import IngredientWithAmount
+from recipe_book.models import IngredientNameWithAmount
 
 _BASE_URL = 'https://www.russianfood.com/recipes'
 _RECIPE_URL = f'{_BASE_URL}/recipe.php'
@@ -23,7 +23,7 @@ _SELECTOR_RECIPE_STEP = '.center_block .recipe_new .step_n'
 class ParsedRecipeData(TypedDict):
     title: str
     description: str
-    ingredients: Sequence[IngredientWithAmount]
+    ingredients: Sequence[IngredientNameWithAmount]
     steps: Sequence[str]
 
 
@@ -56,7 +56,7 @@ def _parse_recipe_page(*_, recipe_id, session, sleep_sec):
         'title': soup.select_one(_SELECTOR_RECIPE_TITLE).get_text().strip(),
         'description': soup.select_one(_SELECTOR_RECIPE_DESCRIPTION).get_text().strip(),
         'ingredients': (
-            IngredientWithAmount(*(item.strip() for item in ingredient.get_text().split('-', 1)))
+            IngredientNameWithAmount(*(item.strip() for item in ingredient.get_text().split('-', 1)))
             for ingredient in soup.select(_SELECTOR_RECIPE_INGREDIENT_WITH_AMOUNT)
         ),
         'steps': (step.get_text().strip() for step in soup.select(_SELECTOR_RECIPE_STEP))
