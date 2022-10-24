@@ -1,8 +1,10 @@
 import time
-from typing import NamedTuple, Sequence
+from typing import Sequence, TypedDict
 
 import requests
 from bs4 import BeautifulSoup
+
+from recipe_book.models import IngredientNameWithAmount
 
 _BASE_URL = 'https://www.russianfood.com/recipes'
 _RECIPE_URL = f'{_BASE_URL}/recipe.php'
@@ -18,15 +20,10 @@ _SELECTOR_RECIPE_INGREDIENT_WITH_AMOUNT = '.center_block .recipe_new .ingr_block
 _SELECTOR_RECIPE_STEP = '.center_block .recipe_new .step_n'
 
 
-class IngredientWithAmount(NamedTuple):
-    name: str
-    amount: str = ''
-
-
-class Recipe(NamedTuple):
+class ParsedRecipeData(TypedDict):
     title: str
     description: str
-    ingredients_with_amount: Sequence[IngredientWithAmount]
+    ingredients: Sequence[IngredientNameWithAmount]
     steps: Sequence[str]
 
 
@@ -58,14 +55,14 @@ def _parse_recipe_page(*_, recipe_id, session, sleep_sec):
     data = {
         'title': soup.select_one(_SELECTOR_RECIPE_TITLE).get_text().strip(),
         'description': soup.select_one(_SELECTOR_RECIPE_DESCRIPTION).get_text().strip(),
-        'ingredients_with_amount': (
-            IngredientWithAmount(*(item.strip() for item in ingredient.get_text().split('-', 1)))
+        'ingredients': (
+            IngredientNameWithAmount(*(item.strip() for item in ingredient.get_text().split('-', 1)))
             for ingredient in soup.select(_SELECTOR_RECIPE_INGREDIENT_WITH_AMOUNT)
         ),
         'steps': (step.get_text().strip() for step in soup.select(_SELECTOR_RECIPE_STEP))
     }
 
-    return Recipe(**data)
+    return ParsedRecipeData(**data)
 
 
 def parse(count=None, sleep_sec=None):
@@ -73,7 +70,7 @@ def parse(count=None, sleep_sec=None):
         recipes_ids = _get_recipes_ids(session=session)
 
         if count:
-            recipes_ids = recipes_ids[:count]
+            recipes_ids = list(recipes_ids)[:count]
 
         return (
             _parse_recipe_page(recipe_id=recipe_id, session=session, sleep_sec=sleep_sec)
@@ -82,4 +79,4 @@ def parse(count=None, sleep_sec=None):
 
 
 if __name__ == '__main__':
-    print(parse(count=2))
+    print(list(parse(count=1)))

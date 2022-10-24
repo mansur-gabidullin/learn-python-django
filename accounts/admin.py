@@ -6,6 +6,7 @@ from accounts.forms import UserChangeForm, UserCreationForm
 from accounts.models import User
 
 
+@admin.register(User)
 class UserAdmin(_UserAdmin):
     form = UserChangeForm
     add_form = UserCreationForm
@@ -38,6 +39,3 @@ class UserAdmin(_UserAdmin):
     list_display = ("email", "first_name", "last_name", "is_staff")
     search_fields = ("first_name", "last_name", "email")
     ordering = ("email",)
-
-
-admin.site.register(User, UserAdmin)

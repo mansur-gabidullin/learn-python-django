@@ -21,7 +21,7 @@ class RecipeForm(Form):
 
     def clean_ingredients(self):
         ingredients = self.cleaned_data['ingredients']
-        return (name.strip() for name in filter(bool, ingredients.splitlines()))
+        return ((name.strip(), '') for name in filter(bool, ingredients.splitlines()))
 
     def clean_steps(self):
         steps = self.cleaned_data['steps']

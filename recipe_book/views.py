@@ -1,17 +1,17 @@
 from django.contrib.auth.mixins import AccessMixin
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import transaction
 from django.http import Http404
 from django.urls import reverse_lazy
-from django.views.generic import TemplateView, DetailView, ListView, FormView
+from django.views.generic import TemplateView, ListView, FormView
 
 from recipe_book.forms import RecipeForm
-from recipe_book.models import Recipe, Ingredient, RecipeIngredient, Instruction, Stage, Step
+from recipe_book.models import Recipe, IngredientNameWithAmount
 
 
 class IndexView(TemplateView):
     template_name = 'recipe_book/index.html'
     extra_context = {'title': 'Главная'}
+    http_method_names = ['get']
 
 
 class RecipesListView(ListView):
@@ -19,22 +19,13 @@ class RecipesListView(ListView):
     context_object_name = 'recipes'
     extra_context = {'title': 'Рецепты'}
     template_name = 'recipe_book/recipes.html'
+    http_method_names = ['get']
 
 
 class AboutAsTemplateView(TemplateView):
     extra_context = {'title': 'О нас'}
     template_name = 'recipe_book/about_us.html'
-
-
-class RecipeDetailView(DetailView):
-    model = Recipe
-    context_object_name = 'recipe'
-    template_name = 'recipe_book/recipe.html'
-
-    def get_context_data(self, **kwargs):
-        context = super(RecipeDetailView, self).get_context_data(**kwargs)
-        context.update(title=self.object.title)
-        return context
+    http_method_names = ['get']
 
 
 class RecipeFormView(AccessMixin, FormView):
@@ -47,20 +38,25 @@ class RecipeFormView(AccessMixin, FormView):
 
     def dispatch(self, request, *args, **kwargs):
         self.mode = self.kwargs.get('mode')
+        pk_arg = self.kwargs.get('pk')
         has_access = request.user.is_superuser or self.mode == 'view'
 
-        if not has_access:
+        if not has_access or self.mode == 'view' and request.method == 'POST':
             return self.handle_no_permission()
 
-        if self.mode == 'view' and request.method == 'POST':
-            raise Exception(f'The HTTP method {self.mode} is not allowed in view mode.')
+        try:
+            pk = int(pk_arg)
+        except (ValueError, TypeError):
+            pk = None
+
+        if not pk and self.mode != 'add':
+            raise Http404
 
         try:
-            pk = int(self.kwargs.get('pk'))
-            self.recipe = Recipe.objects.get(pk=pk)
-        except (ValueError, TypeError, ObjectDoesNotExist):
+            self.recipe = Recipe.objects.prefetch_related('ingredients', 'steps').get(pk=pk)
+        except ObjectDoesNotExist as error:
             if self.mode != 'add':
-                raise Http404()
+                raise error
 
         return super(RecipeFormView, self).dispatch(request, *args, **kwargs)
 
@@ -72,7 +68,12 @@ class RecipeFormView(AccessMixin, FormView):
     def get_initial(self):
         initial = super(RecipeFormView, self).get_initial()
         if self.recipe:
-            initial.update(self.recipe.get_fields_values())
+            initial.update({
+                'title': self.recipe.title,
+                'description': self.recipe.description,
+                'ingredients': '\n'.join(i.ingredient.name for i in self.recipe.ingredients.all()),
+                'steps': '\n'.join(step.description for step in self.recipe.steps.all()),
+            })
         return initial
 
     def get_context_data(self, **kwargs):
@@ -97,56 +98,20 @@ class RecipeFormView(AccessMixin, FormView):
         return context
 
     def form_valid(self, form):
-        title = None
-        description = None
-        ingredients = None
-        steps = None
+        data = {}
 
         if self.mode != 'delete':
             data = form.cleaned_data
-            title = data['title']
-            description = data['description']
-            ingredients = data['ingredients']
-            steps = data['steps']
+            data['ingredients'] = (IngredientNameWithAmount(name, amount='') for name, amount in data['ingredients'])
 
-        with transaction.atomic():
-            if self.mode == 'add':
-                recipe = Recipe.objects.create(title=title, description=description)
-            else:
-                recipe = self.recipe
-
-            if self.mode == 'edit':
-                recipe.title = title
-                recipe.description = description
-                recipe.save()
-
-            if self.mode == 'edit' or self.mode == 'delete':
-                RecipeIngredient.objects.filter(recipe=recipe).delete()
-                recipe.ingredients.all().delete()
-                Step.objects.filter(stage__instruction__recipe=recipe).delete()
-                Stage.objects.filter(instruction__recipe=recipe).delete()
-                recipe.instruction.delete()
-
-            if self.mode == 'delete':
-                recipe.delete()
-            else:
-                instruction = Instruction.objects.create(recipe=recipe)
-                stage = Stage.objects.create(instruction=instruction, number=1)
-
-                for number, step_description in enumerate(steps, start=1):
-                    Step.objects.create(stage=stage, number=number, description=step_description)
-
-                for ingredient_name in ingredients:
-                    try:
-                        ingredient = Ingredient.objects.get(name=ingredient_name)
-                    except Ingredient.DoesNotExist:
-                        ingredient = Ingredient.objects.create(name=ingredient_name)
-
-                    RecipeIngredient.objects.create(recipe=recipe, ingredient=ingredient)
-
-                for number, step_description in enumerate(steps, start=1):
-                    step = stage.steps.get(number=number)
-                    step.step_description = step_description
-                    step.save()
+        match self.mode:
+            case 'add':
+                Recipe.add(**data)
+            case 'edit':
+                self.recipe.edit(**data)
+            case 'delete':
+                self.recipe.remove()
+            case _:
+                raise ValueError(f'{self.mode} is not supported')
 
         return super(RecipeFormView, self).form_valid(form)
