@@ -20,6 +20,7 @@ class RecipesListView(ListView):
     extra_context = {'title': 'Рецепты'}
     template_name = 'recipe_book/recipes.html'
     http_method_names = ['get']
+    paginate_by = 5
 
 
 class AboutAsTemplateView(TemplateView):
