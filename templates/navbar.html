@@ -1,5 +1,6 @@
 {% load static %}
 {% load nav_items %}
+{% load user_greeting %}
 <!-- Navbar Start -->
 <div class="container-fluid fixed-top px-0 wow fadeIn" data-wow-delay="0.1s">
     {% include 'top_bar.html' %}
@@ -23,8 +24,8 @@
                 {% endfor %}
             </div>
             <div class="d-none d-lg-flex ms-2">
-
                 {% if user.is_authenticated %}
+                    <span class="p-1 ms-3">{{ user|greeting }}</span>
                     <a class="btn-sm-square bg-white rounded-circle ms-3" href="{% url 'accounts:profile' %}">
                         <small class="fa fa-user text-body"></small>
                     </a>
