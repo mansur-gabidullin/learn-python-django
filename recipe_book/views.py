@@ -36,6 +36,7 @@ class RecipeFormView(AccessMixin, FormView):
     http_method_names = ['get', 'post']
     recipe = None
     mode = None
+    ingredients = None
 
     def dispatch(self, request, *args, **kwargs):
         self.mode = self.kwargs.get('mode')
@@ -54,10 +55,16 @@ class RecipeFormView(AccessMixin, FormView):
             raise Http404
 
         try:
-            self.recipe = Recipe.objects.prefetch_related('ingredients', 'steps').get(pk=pk)
+            if self.mode != 'delete':
+                self.recipe = Recipe.objects.prefetch_related('ingredients', 'steps').get(pk=pk)
+            else:
+                self.recipe = Recipe.objects.get(pk=pk)
         except ObjectDoesNotExist as error:
             if self.mode != 'add':
                 raise error
+
+        if self.mode != 'delete' and self.recipe:
+            self.ingredients = self.recipe.get_ingredients()
 
         return super(RecipeFormView, self).dispatch(request, *args, **kwargs)
 
@@ -68,11 +75,13 @@ class RecipeFormView(AccessMixin, FormView):
 
     def get_initial(self):
         initial = super(RecipeFormView, self).get_initial()
-        if self.recipe:
+        if self.mode != 'delete' and self.recipe:
             initial.update({
                 'title': self.recipe.title,
                 'description': self.recipe.description,
-                'ingredients': '\n'.join(i.ingredient.name for i in self.recipe.ingredients.all()),
+                'ingredients': '\n'.join(
+                    i.ingredient.name for i in self.ingredients
+                ),
                 'steps': '\n'.join(step.description for step in self.recipe.steps.all()),
             })
         return initial
@@ -94,7 +103,7 @@ class RecipeFormView(AccessMixin, FormView):
         context.update(title=title, mode=self.mode)
 
         if self.recipe:
-            context.update(recipe=self.recipe, pk=self.recipe.id)
+            context.update(recipe=self.recipe, pk=self.recipe.id, ingredients=self.ingredients)
 
         return context
 
