@@ -24,7 +24,7 @@
                 <p>{{ recipe.description }}</p>
                 <h4>Ингредиенты</h4>
                 <ul>
-                    {% for name in recipe.ingredients.all %}
+                    {% for name in ingredients %}
                         <li>{{ name }}</li>
                     {% endfor %}
                 </ul>

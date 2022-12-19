@@ -25,6 +25,9 @@ class Recipe(Model):
     def __str__(self):
         return self.title
 
+    def get_ingredients(self):
+        return self.ingredients.select_related('ingredient').all()
+
     @transaction.atomic
     def create_ingredients(self, ingredients: Sequence[IngredientNameWithAmount]):
         for name, amount in ingredients:
