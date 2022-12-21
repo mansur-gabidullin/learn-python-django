@@ -1,0 +1,22 @@
+server {
+    listen 80;
+    server_name 0.0.0.0;
+
+    if ($http_user_agent ~* (googlebot|yandexbot|baiduspider|bingbot) ) {
+        set $crawler 'yes';
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location /static/ {
+        root /srv/www;
+    }
+
+    location /media/ {
+        root /srv/www;
+    }
+
+    location / {
+        include proxy_params;
+        proxy_pass http://unix:/srv/www/recipe_book.sock;
+    }
+}

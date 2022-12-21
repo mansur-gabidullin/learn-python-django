@@ -1,0 +1,34 @@
+
+server {
+        listen 80;
+        server_name wavylife.ru www.wavylife.ru;
+        return 301 https://wavylife.ru$request_uri;
+
+}
+
+server {
+    server_name wavylife.ru;
+    listen wavylife.ru:443 ssl;
+
+    ssl_certificate /etc/ssl/nbundle.crt;
+    ssl_certificate_key /etc/ssl/wavylife.key;
+
+    ssl_stapling on;
+    ssl_stapling_verify on;
+
+    client_max_body_size 128m;
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location /static/ {
+        root /home/vergil-blog/parrot_blog;
+    }
+
+    location /media/ {
+        root /home/vergil-blog/parrot_blog;
+    }
+
+    location / {
+        include proxy_params;
+        proxy_pass http://unix:/home/vergil-blog/parrot_blog/parrot_blog.sock;
+    }
+}

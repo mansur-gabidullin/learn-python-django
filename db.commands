@@ -1,0 +1,12 @@
+sudo apt-get install postgresql postgresql-contrib
+sudo -u postgres psql
+
+CREATE DATABASE sitedb;
+CREATE USER django with NOSUPERUSER PASSWORD 'nu123456';
+GRANT ALL PRIVILEGES ON DATABASE sitedb TO django;
+
+ALTER ROLE django SET CLIENT_ENCODING TO 'UTF8';
+ALTER ROLE django SET default_transaction_isolation TO 'READ COMMITTED';
+ALTER ROLE django SET TIME ZONE 'Europe/Moscow';
+
+/q

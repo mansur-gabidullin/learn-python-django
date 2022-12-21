@@ -1,0 +1,12 @@
+[Unit]
+Description=gunicorn daemon
+After=network.target
+
+[Service]
+User=root
+Group=www-data
+WorkingDirectory=/srv/www
+ExecStart=/srv/www/.venv/bin/gunicorn --access-logfile - --workers 3 --bind unix:/srv/www/recipe_book.sock config.wsgi
+
+[Install]
+WantedBy=multi-user.target
