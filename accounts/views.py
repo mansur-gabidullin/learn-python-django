@@ -1,9 +1,10 @@
 import logging
 
 from django.contrib.auth import authenticate, login
-from django.http import HttpResponseNotAllowed
+from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView
+from rest_framework.authtoken.models import Token
 
 from accounts.forms import UserCreationForm
 
@@ -54,3 +55,25 @@ def signup(request):
             return HttpResponseNotAllowed(['GET', 'POST'])
 
     return render(request, 'accounts/signup.html', {'form': form, 'title': 'Регистрация'})
+
+
+def update_token_ajax(request):
+    is_post = request.method == 'POST'
+
+    if not is_post:
+        return HttpResponseNotAllowed(['POST'])
+
+    user = request.user
+    token = None
+
+    try:
+        token = Token.objects.get(user=user)
+    except Token.DoesNotExist:
+        ...
+
+    if token:
+        token.delete()
+
+    token = Token.objects.create(user=user)
+
+    return JsonResponse({'key': token.key})
