@@ -12,5 +12,4 @@ class UserCreationForm(_UserCreationForm):
 class UserChangeForm(_UserChangeForm):
     class Meta:
         model = User
-        # fields = ('email',)
         fields = "__all__"

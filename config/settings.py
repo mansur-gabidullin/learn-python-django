@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'accounts',
     'debug_toolbar',
     'rest_framework',
+    'rest_framework.authtoken',
     # django_cleanup should be placed last
     'django_cleanup.apps.CleanupConfig',
 ]
@@ -126,6 +127,10 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+LOGIN_URL = '/accounts/login/'
+
 # django-debug-toolbar
 INTERNAL_IPS = ['127.0.0.1']
 
@@ -133,6 +138,10 @@ REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+        'rest_framework.permissions.IsAuthenticated'
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
     ]
 }
