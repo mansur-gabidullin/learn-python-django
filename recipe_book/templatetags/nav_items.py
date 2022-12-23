@@ -15,7 +15,7 @@ register = template.Library()
 @register.simple_tag
 def get_nav_items():
     return (
-        NavItem(reverse('index'), 'Главная'),
-        NavItem(reverse('recipes'), 'Рецепты'),
-        NavItem(reverse('about_us'), 'О нас'),
+        NavItem(reverse('recipe_book:index'), 'Главная'),
+        NavItem(reverse('recipe_book:recipes'), 'Рецепты'),
+        NavItem(reverse('recipe_book:about_us'), 'О нас'),
     )
