@@ -37,6 +37,9 @@ INSTALLED_APPS = [
     'recipe_book',
     'accounts',
     'debug_toolbar',
+    'rest_framework',
+    # django_cleanup should be placed last
+    'django_cleanup.apps.CleanupConfig',
 ]
 
 MIDDLEWARE = [
@@ -125,3 +128,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # django-debug-toolbar
 INTERNAL_IPS = ['127.0.0.1']
+
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    ]
+}
