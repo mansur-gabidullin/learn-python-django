@@ -78,7 +78,7 @@ class Recipe(Model):
 
 
 class RecipeIngredient(Model):
-    ingredient = ForeignKey(Ingredient, on_delete=RESTRICT)
+    ingredient = ForeignKey(Ingredient, on_delete=RESTRICT, related_name='recipe_ingredients')
     recipe = ForeignKey(Recipe, on_delete=RESTRICT, related_name='ingredients')
     amount = CharField(max_length=30, blank=True)
 

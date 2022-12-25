@@ -6,4 +6,19 @@
         {{ object }}
     </p>
     <a href="{% url 'accounts:logout' %}">Выйти</a>
+    <hr/>
+    {% csrf_token %}
+    Токен:
+    <span id="token">{% if object.auth_token %} {{ object.auth_token }} {% else %} не создан {% endif %}</span>
+    <hr/>
+    <div id="root"></div>
 {% endblock %}
+
+{% block scripts %}
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Don't use this in production: -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="{% static 'js/profile.jsx' %}" type="text/babel"></script>
+{% endblock %}
+
